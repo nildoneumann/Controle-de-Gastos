@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Gastos</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00aaff">
+    <!-- Ícones do PWA -->
+    <link rel="icon" href="icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="icons/icon-512.png">
+
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            padding: 10px;
+            color: blue;
+            font-weight: bold;
+            background: lightblue;
+            font-size: 18px;
+        }
+        header {
+            background-color: lightgreen;
+            color: blue;
+            padding: 1em;
+            text-align: center;
+            border-radius: 0.50em;
+        }
+        main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2em;
+        }
+        #gastos {
+            margin-bottom: 1em;
+            text-align: center;
+        }
+        #tabela-gastos {
+            border-collapse: collapse;
+            width: 100%;
+            background: lightyellow;
+            font-weight: bold;
+            color: black;
+            margin-bottom: 0.1em;
+        }
+        #tabela-gastos th, #tabela-gastos td {
+            border: 1px solid #ddd;
+            padding: 0.3em;
+            text-align: left;
+            color: darkblue;
+        }
+        #tabela-gastos tfoot td {
+            font-weight: bold;
+            background: #d9f9d9;
+            color: darkgreen;
+        }
+        #novo-gasto {
+            margin-top: 0.1em;
+            text-align: center;
+        }
+        #form-novo-gasto {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-weight: bold;
+            color: darkblue;
+        }
+        #form-novo-gasto label {
+            margin-bottom: 0.3em;
+            font-size: 18px;
+        }
+        #form-novo-gasto input {
+            padding: 0.5em;
+            margin-bottom: 0.5em;
+            width: 100%;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        #btn-salvar, #btn-gerar-pdf {
+            background-color: #00ffff;
+            color: darkblue;
+            padding: 0.5em 1em;
+            border: none;
+            border-radius: 0.25em;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 10px;
+        }        
+        #btn-salvar:hover, #btn-gerar-pdf:hover {
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Controle de Gastos</h1>
+    </header>
+    <main>
+        <section id="gastos">
+            <h2><u>Gastos</u></h2>
+            <table id="tabela-gastos">
+                <thead>
+                    <tr>
+                        <th>Modalidade</th>
+                        <th>Valor</th>
+                        <th>Data</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="corpo-tabela">
+                    <!-- Gastos inseridos aqui -->
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" id="total-gastos">Total: R$ 0,00</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <button id="btn-gerar-pdf">GERAR PDF</button>
+        </section>
+        <section id="novo-gasto">
+            <h2><u>Novo Gasto</u></h2>
+            <form id="form-novo-gasto">
+                <label for="modalidade">Modalidade:</label>
+                <input type="text" id="modalidade" name="modalidade" required>
+                <label for="valor">Valor:</label>
+                <input type="number" id="valor" name="valor" step="0.01" required>
+                <label for="data">Data:</label>
+                <input type="date" id="data" name="data" required>
+                <button id="btn-salvar" type="submit">SALVAR GASTO</button>
+            </form>
+        </section>
+    </main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script>
+
+        let gastos = [];
+
+        document.getElementById('form-novo-gasto').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const modalidade = document.getElementById('modalidade').value;
+            const valor = parseFloat(document.getElementById('valor').value);
+            const data = document.getElementById('data').value;
+            adicionarGasto(modalidade, valor, data);
+            document.getElementById('form-novo-gasto').reset();
+        });
+
+        function adicionarGasto(modalidade, valor, data) {
+            gastos.push({ modalidade, valor, data });
+            atualizarTabela();
+        }
+
+        function atualizarTabela() {
+            const tabela = document.getElementById('corpo-tabela');
+            tabela.innerHTML = '';
+            let total = 0;
+
+            gastos.forEach((gasto, index) => {
+                total += gasto.valor;
+                const linha = document.createElement('tr');
+                linha.innerHTML = `
+                    <td>${gasto.modalidade}</td>
+                    <td>R$ ${gasto.valor.toFixed(2).replace('.', ',')}</td>
+                    <td>${gasto.data}</td>
+                    <td>
+                        <button onclick="editarGasto(${index})">Editar</button>
+                        <button onclick="excluirGasto(${index})">Excluir</button>
+                    </td>
+                `;
+                tabela.appendChild(linha);
+            });
+
+            document.getElementById('total-gastos').textContent = 
+                `Total: R$ ${total.toFixed(2).replace('.', ',')}`;
+        }
+
+        function editarGasto(index) {
+            const gasto = gastos[index];
+            document.getElementById('modalidade').value = gasto.modalidade;
+            document.getElementById('valor').value = gasto.valor;
+            document.getElementById('data').value = gasto.data;
+            document.getElementById('btn-salvar').onclick = (e) => {
+                e.preventDefault();
+                gasto.modalidade = document.getElementById('modalidade').value;
+                gasto.valor = parseFloat(document.getElementById('valor').value);
+                gasto.data = document.getElementById('data').value;
+                atualizarTabela();
+                document.getElementById('form-novo-gasto').reset();
+                document.getElementById('btn-salvar').onclick = null;
+            };
+        }
+
+        function excluirGasto(index) {
+            gastos.splice(index, 1);
+            atualizarTabela();
+        }
+
+        document.getElementById('btn-gerar-pdf').addEventListener('click', () => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text('Controle de Gastos', 14, 15);
+
+    // Monta as linhas da tabela
+    const rows = gastos.map(g => ([
+        g.modalidade,
+        "R$ " + g.valor.toFixed(2).replace(".", ","),
+        g.data
+    ]));
+
+    // Adiciona tabela ao PDF
+    doc.autoTable({
+        head: [['Modalidade', 'Valor', 'Data']],
+        body: rows,
+        startY: 25
+    });
+
+    // Calcula total
+    const total = gastos.reduce((sum, g) => sum + g.valor, 0);
+    
+    // Adiciona total ao final
+    doc.setFontSize(14);
+    doc.text(
+        `Total: R$ ${total.toFixed(2).replace('.', ',')}`,
+        14,
+        doc.lastAutoTable.finalY + 10
+    );
+
+    doc.save('gastos.pdf');
+});
+<!-- Registrar o Service Worker -->
+if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("service-worker.js")
+        .then(() => console.log("Service Worker registrado"))
+        .catch(err => console.error("Erro ao registrar SW:", err));
+    }
+
+    </script>
+</body>
+</html>
