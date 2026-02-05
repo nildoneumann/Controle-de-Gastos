@@ -9,8 +9,8 @@
     <!-- Ícones do PWA -->
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-512.png">
-
     <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -135,110 +135,102 @@
             </form>
         </section>
     </main>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <script>
 
-        let gastos = [];
+        // ------------------ SERVICE WORKER ------------------
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js")
+    .then(() => console.log("Service Worker registrado"))
+    .catch(err => console.error("Erro SW:", err));
+}
 
-        document.getElementById('form-novo-gasto').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const modalidade = document.getElementById('modalidade').value;
-            const valor = parseFloat(document.getElementById('valor').value);
-            const data = document.getElementById('data').value;
-            adicionarGasto(modalidade, valor, data);
-            document.getElementById('form-novo-gasto').reset();
-        });
+// ------------------ DADOS LOCAIS ------------------
+let gastos = JSON.parse(localStorage.getItem("gastos")) || [];
 
-        function adicionarGasto(modalidade, valor, data) {
-            gastos.push({ modalidade, valor, data });
-            atualizarTabela();
-        }
+function salvarLocal() {
+    localStorage.setItem("gastos", JSON.stringify(gastos));
+}
 
-        function atualizarTabela() {
-            const tabela = document.getElementById('corpo-tabela');
-            tabela.innerHTML = '';
-            let total = 0;
+// ------------------ TABELA ------------------
+function atualizarTabela() {
+    const corpo = document.getElementById("corpo-tabela");
+    corpo.innerHTML = "";
+    let total = 0;
 
-            gastos.forEach((gasto, index) => {
-                total += gasto.valor;
-                const linha = document.createElement('tr');
-                linha.innerHTML = `
-                    <td>${gasto.modalidade}</td>
-                    <td>R$ ${gasto.valor.toFixed(2).replace('.', ',')}</td>
-                    <td>${gasto.data}</td>
-                    <td>
-                        <button onclick="editarGasto(${index})">Editar</button>
-                        <button onclick="excluirGasto(${index})">Excluir</button>
-                    </td>
-                `;
-                tabela.appendChild(linha);
-            });
+    gastos.forEach((g, i) => {
+        total += g.valor;
+        corpo.innerHTML += `
+        <tr>
+            <td>${g.modalidade}</td>
+            <td>R$ ${g.valor.toFixed(2).replace(".", ",")}</td>
+            <td>${g.data}</td>
+            <td>
+                <button onclick="editarGasto(${i})">Editar</button>
+                <button onclick="excluirGasto(${i})">Excluir</button>
+            </td>
+        </tr>`;
+    });
 
-            document.getElementById('total-gastos').textContent = 
-                `Total: R$ ${total.toFixed(2).replace('.', ',')}`;
-        }
+    document.getElementById("total-gastos").innerText =
+        `Total: R$ ${total.toFixed(2).replace(".", ",")}`;
 
-        function editarGasto(index) {
-            const gasto = gastos[index];
-            document.getElementById('modalidade').value = gasto.modalidade;
-            document.getElementById('valor').value = gasto.valor;
-            document.getElementById('data').value = gasto.data;
-            document.getElementById('btn-salvar').onclick = (e) => {
-                e.preventDefault();
-                gasto.modalidade = document.getElementById('modalidade').value;
-                gasto.valor = parseFloat(document.getElementById('valor').value);
-                gasto.data = document.getElementById('data').value;
-                atualizarTabela();
-                document.getElementById('form-novo-gasto').reset();
-                document.getElementById('btn-salvar').onclick = null;
-            };
-        }
+    salvarLocal();
+}
 
-        function excluirGasto(index) {
-            gastos.splice(index, 1);
-            atualizarTabela();
-        }
+// ------------------ FORM ------------------
+document.getElementById("form-novo-gasto").addEventListener("submit", e => {
+    e.preventDefault();
+    gastos.push({
+        modalidade: modalidade.value,
+        valor: parseFloat(valor.value),
+        data: data.value
+    });
+    e.target.reset();
+    atualizarTabela();
+});
 
-        document.getElementById('btn-gerar-pdf').addEventListener('click', () => {
+function excluirGasto(i) {
+    gastos.splice(i, 1);
+    atualizarTabela();
+}
+
+function editarGasto(i) {
+    const g = gastos[i];
+    modalidade.value = g.modalidade;
+    valor.value = g.valor;
+    data.value = g.data;
+    excluirGasto(i);
+}
+
+// ------------------ PDF ------------------
+document.getElementById("btn-gerar-pdf").onclick = () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    doc.setFontSize(16);
-    doc.text('Controle de Gastos', 14, 15);
+    doc.text("Controle de Gastos", 14, 15);
 
-    // Monta as linhas da tabela
-    const rows = gastos.map(g => ([
-        g.modalidade,
-        "R$ " + g.valor.toFixed(2).replace(".", ","),
-        g.data
-    ]));
-
-    // Adiciona tabela ao PDF
     doc.autoTable({
-        head: [['Modalidade', 'Valor', 'Data']],
-        body: rows,
-        startY: 25
+        startY: 25,
+        head: [["Modalidade", "Valor", "Data"]],
+        body: gastos.map(g => [
+            g.modalidade,
+            "R$ " + g.valor.toFixed(2).replace(".", ","),
+            g.data
+        ])
     });
 
-    // Calcula total
-    const total = gastos.reduce((sum, g) => sum + g.valor, 0);
-    
-    // Adiciona total ao final
-    doc.setFontSize(14);
+    const total = gastos.reduce((s, g) => s + g.valor, 0);
     doc.text(
-        `Total: R$ ${total.toFixed(2).replace('.', ',')}`,
+        `Total: R$ ${total.toFixed(2).replace(".", ",")}`,
         14,
         doc.lastAutoTable.finalY + 10
     );
 
-    doc.save('gastos.pdf');
-});
-<!-- Registrar o Service Worker -->
-if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("service-worker.js")
-        .then(() => console.log("Service Worker registrado"))
-        .catch(err => console.error("Erro ao registrar SW:", err));
-    }
+    doc.save("gastos.pdf");
+};
+
+// ------------------ INIT ------------------
+window.onload = atualizarTabela;
 
     </script>
 </body>
