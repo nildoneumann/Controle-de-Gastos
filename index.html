@@ -1,239 +1,289 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Gastos</title>
-    <link rel="manifest" href="manifest.json">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Gastos</title>
+<link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#00aaff">
     <!-- Ícones do PWA -->
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-512.png">
-    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 10px;
-            padding: 10px;
-            color: blue;
-            font-weight: bold;
-            background: lightblue;
-            font-size: 18px;
-        }
-        header {
-            background-color: lightgreen;
-            color: blue;
-            padding: 0.3em 1em;
-            text-align: center;
-            border-radius: 0.50em;
-        }
-        main {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 0.5em;
-        }
-        #gastos {
-            margin-bottom: 0.5em;
-            text-align: center;
-        }
-        #tabela-gastos {
-            border-collapse: collapse;
-            width: 100%;
-            background: lightyellow;
-            font-weight: bold;
-            color: black;
-            margin-bottom: 0.1em;
-        }
-        #tabela-gastos th, #tabela-gastos td {
-            border: 1px solid #ddd;
-            padding: 0.3em;
-            text-align: left;
-            color: darkblue;
-        }
-        #tabela-gastos tfoot td {
-            font-weight: bold;
-            background: #d9f9d9;
-            color: darkgreen;
-        }
-        #novo-gasto {
-            margin-top: 0.1em;
-            text-align: center;
-        }
-        #form-novo-gasto {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-weight: bold;
-            color: darkblue;
-        }
-        #form-novo-gasto label {
-            margin-bottom: 0.3em;
-            font-size: 18px;
-        }
-        #form-novo-gasto input {
-            padding: 0.5em;
-            margin-bottom: 0.5em;
-            width: 100%;
-            font-weight: bold;
-            font-size: 16px;
-        }
-        #btn-salvar, #btn-gerar-pdf {
-            background-color: #00ffff;
-            color: darkblue;
-            padding: 0.5em 1em;
-            border: none;
-            border-radius: 0.25em;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 18px;
-            margin-top: 10px;
-        }        
-        #btn-salvar:hover, #btn-gerar-pdf:hover {
-            background-color: #fff;
-        }
-    </style>
-</head>
-<body>
-    <label for="nome" style="font-size: 8px; color:#15400e; margin-left: 10px">© 2025 Leonildo.Neumann</label>
-    <header>
-        <h1>Controle de Gastos 📝</h1>
-    </header>
-    <main>
-        <section id="novo-gasto">
-            <h2 style="font-size: 19px"><u>Novo Gasto</u></h2>
-            <form id="form-novo-gasto">
-                <label for="modalidade">Modalidade:</label>
-                <input type="text" id="modalidade" name="modalidade" placeholder="Ex: Água,Luz,Internet..." required>
-                <label for="valor">Valor:</label>
-                <input type="number" id="valor" name="valor" step="0.01" required>
-                <label for="data">Data:</label>
-                <input type="date" id="data" name="data" required>
-                <button id="btn-salvar" type="submit">SALVAR GASTO</button>
-            </form>
-        </section>
-        <section id="gastos">
-            <h2 style="font-size: 19px"><u>Gastos</u></h2>
-            <table id="tabela-gastos">
-                <thead>
-                    <tr>
-                        <th style="background-color: lightgreen; text-align: center">Modalidade</th>
-                        <th style="background-color: lightgreen; text-align: center">Valor</th>
-                        <th style="background-color: lightgreen; text-align: center">Data</th>
-                        <th style="background-color: lightgreen; text-align: center">Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="corpo-tabela">
-                    <!-- Gastos inseridos aqui -->
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="4" id="total-gastos">Total: R$ 0,00</td>
-                    </tr>
-                </tfoot>
-            </table>
-            <button id="btn-gerar-pdf">GERAR PDF</button>
-        </section>
-        
-    </main>
-    <script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-        // ------------------ SERVICE WORKER ------------------
+<style>
+body{
+  font-family:Arial, sans-serif;
+  margin:0;
+  background:#f4f6f9;
+}
+header{
+  background:#2c3e50;
+  color:#fff;
+  padding:15px;
+  text-align:center;
+}
+.container{
+  padding:15px;
+  max-width:1000px;
+  margin:auto;
+}
+.card{
+  background:#fff;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:15px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+input, select, button{
+  width:100%;
+  padding:8px;
+  margin-top:5px;
+  margin-bottom:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+button{
+  background:#27ae60;
+  color:#fff;
+  border:none;
+}
+button:hover{
+  background:#219150;
+}
+.table{
+  width:100%;
+  border-collapse:collapse;
+}
+.table th, .table td{
+  padding:5px;
+  border-bottom:1px solid #ddd;
+  text-align:left;
+}
+.flex{
+  display:flex;
+  gap:10px;
+}
+.flex div{
+  flex:1;
+}
+@media(max-width:600px){
+  .flex{
+    flex-direction:column;
+  }
+}
+</style>
+</head>
+
+<body>
+<label for="nome" style="font-size: 8px; color:#15400e; margin-left: 10px">© 2025 Leonildo.Neumann</label>
+<header>
+<h2>💰 Controle de Gastos</h2>
+</header>
+
+<div class="container">
+
+<div class="card">
+<h3>Adicionar Transação</h3>
+<input id="descricao" placeholder="Descrição" style="max-width:97%">
+<input id="valor" type="number" placeholder="Valor" style="max-width:97%">
+<select id="categoria">
+<option>Alimentação</option>
+<option>Transporte</option>
+<option>Lazer</option>
+<option>Moradia</option>
+<option>Outros</option>
+<option>Renda</option>
+</select>
+<select id="tipo">
+<option value="gasto">Gasto</option>
+<option value="receita">Receita</option>
+</select>
+<button onclick="adicionar()">Salvar</button>
+</div>
+
+<div class="card" style="padding:2px 15px">
+<h3>Resumo</h3>
+<p>Saldo: R$ <span id="saldo">0</span></p>
+<p>Receitas: R$ <span id="receitas">0</span></p>
+<p>Gastos: R$ <span id="gastos">0</span></p>
+</div>
+
+<div class="card">
+<canvas id="grafico" style="max-height: 300px"></canvas>
+</div>
+
+<div class="card" style="padding:7px 15px">
+<button onclick="exportarPDF()">📄 Exportar PDF</button>
+</div>
+
+<div class="card">
+<h3>Histórico</h3>
+<table class="table">
+<thead>
+<tr>
+<th>Descrição</th>
+<th>Valor</th>
+<th>Categoria</th>
+<th>Ação</th>
+</tr>
+</thead>
+<tbody id="lista"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js")
     .then(() => console.log("Service Worker registrado"))
     .catch(err => console.error("Erro SW:", err));
 }
 
-// ------------------ DADOS LOCAIS ------------------
-let gastos = JSON.parse(localStorage.getItem("gastos")) || [];
+let dados = JSON.parse(localStorage.getItem('gastos')) || [];
 
-function salvarLocal() {
-    localStorage.setItem("gastos", JSON.stringify(gastos));
+function salvarStorage(){
+  localStorage.setItem('gastos', JSON.stringify(dados));
 }
 
-// ------------------ TABELA ------------------
-function atualizarTabela() {
-    const corpo = document.getElementById("corpo-tabela");
-    corpo.innerHTML = "";
-    let total = 0;
+function adicionar(){
+  const descricao = document.getElementById('descricao').value;
+  const valor = parseFloat(document.getElementById('valor').value);
+  const categoria = document.getElementById('categoria').value;
+  const tipo = document.getElementById('tipo').value;
 
-    gastos.forEach((g, i) => {
-        total += g.valor;
-        corpo.innerHTML += `
-        <tr>
-            <td>${g.modalidade}</td>
-            <td>R$ ${g.valor.toFixed(2).replace(".", ",")}</td>
-            <td>${g.data}</td>
-            <td>
-                <button onclick="editarGasto(${i})">Editar</button>
-                <button onclick="excluirGasto(${i})">Excluir</button>
-            </td>
-        </tr>`;
+  if(!descricao || isNaN(valor)) return alert('Preencha os campos corretamente');
+
+  dados.push({descricao, valor, categoria, tipo});
+  salvarStorage();
+  atualizar();
+}
+
+function remover(index){
+  dados.splice(index,1);
+  salvarStorage();
+  atualizar();
+}
+
+function atualizar(){
+  const lista = document.getElementById('lista');
+  lista.innerHTML = '';
+
+  let receitas = 0;
+  let gastos = 0;
+
+  dados.forEach((item, index)=>{
+    if(item.tipo === 'receita') receitas += item.valor;
+    else gastos += item.valor;
+
+    lista.innerHTML += `
+      <tr>
+        <td>${item.descricao}</td>
+        <td>R$ ${item.valor.toFixed(2)}</td>
+        <td>${item.categoria}</td>
+        <td><button onclick="remover(${index})" style="background-color: red; margin-bottom:5px">X</button></td>
+      </tr>
+    `;
+  });
+
+  document.getElementById('receitas').innerText = receitas.toFixed(2);
+  document.getElementById('gastos').innerText = gastos.toFixed(2);
+  document.getElementById('saldo').innerText = (receitas - gastos).toFixed(2);
+
+  atualizarGrafico();
+}
+
+let chart;
+function atualizarGrafico(){
+  const categorias = {};
+
+  dados.forEach(item=>{
+    if(item.tipo === 'gasto'){
+      categorias[item.categoria] = (categorias[item.categoria] || 0) + item.valor;
+    }
+  });
+
+  const labels = Object.keys(categorias);
+  const valores = Object.values(categorias);
+
+  if(chart) chart.destroy();
+
+  const ctx = document.getElementById('grafico');
+  chart = new Chart(ctx, {
+    type:'doughnut',
+    data:{
+      labels: labels,
+      datasets:[{data: valores}]
+    }
+  });
+}
+
+function exportarPDF(){
+  try {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      alert('Biblioteca PDF não carregou');
+      return;
+    }
+
+    const doc = new window.jspdf.jsPDF();
+
+    let receitas = 0;
+    let gastos = 0;
+
+    dados.forEach(item=>{
+      if(item.tipo === 'receita') receitas += item.valor;
+      else gastos += item.valor;
     });
 
-    document.getElementById("total-gastos").innerText =
-        `Total: R$ ${total.toFixed(2).replace(".", ",")}`;
+    const saldo = receitas - gastos;
+    const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-    salvarLocal();
-}
+    doc.setFontSize(16);
+    doc.text('RELATÓRIO FINANCEIRO', 105, 15, null, null, 'center');
 
-// ------------------ FORM ------------------
-document.getElementById("form-novo-gasto").addEventListener("submit", e => {
-    e.preventDefault();
-    gastos.push({
-        modalidade: modalidade.value,
-        valor: parseFloat(valor.value),
-        data: data.value
-    });
-    e.target.reset();
-    atualizarTabela();
-});
+    doc.setFontSize(10);
+    doc.text('Data: ' + dataAtual, 10, 25);
+    doc.text('Receitas: R$ ' + receitas.toFixed(2), 10, 35);
+    doc.text('Gastos: R$ ' + gastos.toFixed(2), 10, 42);
+    doc.text('Saldo: R$ ' + saldo.toFixed(2), 10, 49);
 
-function excluirGasto(i) {
-    gastos.splice(i, 1);
-    atualizarTabela();
-}
+    doc.line(10, 55, 200, 55);
 
-function editarGasto(i) {
-    const g = gastos[i];
-    modalidade.value = g.modalidade;
-    valor.value = g.valor;
-    data.value = g.data;
-    excluirGasto(i);
-}
+    let y = 65;
 
-// ------------------ PDF ------------------
-document.getElementById("btn-gerar-pdf").onclick = () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    doc.text('Descrição', 10, y);
+    doc.text('Categoria', 90, y);
+    doc.text('Valor', 160, y);
 
-    doc.text("Controle de Gastos", 14, 15);
+    y += 10;
 
-    doc.autoTable({
-        startY: 25,
-        head: [["Modalidade", "Valor", "Data"]],
-        body: gastos.map(g => [
-            g.modalidade,
-            "R$ " + g.valor.toFixed(2).replace(".", ","),
-            g.data
-        ])
+    dados.forEach(item => {
+      doc.text(String(item.descricao).substring(0,30), 10, y);
+      doc.text(String(item.categoria), 90, y);
+      doc.text('R$ ' + item.valor.toFixed(2), 160, y);
+
+      y += 8;
+
+      if (y > 280) {
+        doc.addPage();
+        y = 20;
+      }
     });
 
-    const total = gastos.reduce((s, g) => s + g.valor, 0);
-    doc.text(
-        `Total: R$ ${total.toFixed(2).replace(".", ",")}`,
-        14,
-        doc.lastAutoTable.finalY + 10
-    );
+    doc.save('relatorio-financeiro.pdf');
 
-    doc.save("gastos.pdf");
-};
+  } catch (e) {
+    console.error(e);
+    alert('Erro ao gerar PDF');
+  }
+}
 
-// ------------------ INIT ------------------
-window.onload = atualizarTabela;
+// Inicialização
+atualizar();
+</script>
 
-    </script>
 </body>
 </html>
+
