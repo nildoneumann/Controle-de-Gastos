@@ -161,7 +161,15 @@ function adicionar(){
   salvarStorage();
   atualizar();
 }
+  // 🔥 Limpar campos após salvar
+  descricaoInput.value = '';
+  valorInput.value = '';
+  categoriaInput.selectedIndex = 0;
+  tipoInput.value = 'gasto';
 
+  descricaoInput.focus();
+}
+    
 function remover(index){
   dados.splice(index,1);
   salvarStorage();
