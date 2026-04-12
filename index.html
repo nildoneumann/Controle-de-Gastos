@@ -31,7 +31,7 @@ header{
 }
 .card{
   background:#fff;
-  padding:15px;
+  padding:7px 15px;
   border-radius:10px;
   margin-bottom:15px;
   box-shadow:0 2px 6px rgba(0,0,0,0.1);
@@ -255,10 +255,17 @@ function exportarPDF(){
     const saldo = receitas - gastos;
     const dataAtual = new Date().toLocaleDateString('pt-BR');
 
+      // 🔥 TÍTULO EM NEGRITO
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(41, 128, 185); // Define cor azul (R, G, B)
     doc.setFontSize(16);
     doc.text('RELATÓRIO FINANCEIRO', 105, 15, null, null, 'center');
 
+      // 🔥 VOLTA PARA NORMAL
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
     doc.setFontSize(10);
+      
     doc.text('Data: ' + dataAtual, 10, 25);
     doc.text('Receitas: R$ ' + receitas.toFixed(2), 10, 35);
     doc.text('Gastos: R$ ' + gastos.toFixed(2), 10, 42);
@@ -268,10 +275,17 @@ function exportarPDF(){
 
     let y = 65;
 
+      // 🔥 CABEÇALHO TABELA EM NEGRITO
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(41, 128, 185); // Define cor azul (R, G, B)
     doc.text('Descrição', 10, y);
     doc.text('Categoria', 90, y);
     doc.text('Valor', 160, y);
 
+      // 🔥 CONTEÚDO NORMAL
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
+      
     y += 10;
 
     dados.forEach(item => {
