@@ -112,7 +112,7 @@ button:hover{
 </div>
 
 <div class="card">
-<canvas id="grafico" style="max-height: 300px"></canvas>
+<canvas id="grafico" style="max-height: 225px"></canvas>
 </div>
 
 <div class="card" style="padding:7px 15px">
@@ -150,16 +150,29 @@ function salvarStorage(){
 }
 
 function adicionar(){
-  const descricao = document.getElementById('descricao').value;
-  const valor = parseFloat(document.getElementById('valor').value);
-  const categoria = document.getElementById('categoria').value;
-  const tipo = document.getElementById('tipo').value;
+  const descricaoInput = document.getElementById('descricao');
+  const valorInput = document.getElementById('valor');
+  const categoriaInput = document.getElementById('categoria');
+  const tipoInput = document.getElementById('tipo');
+
+  const descricao = descricaoInput.value;
+  const valor = parseFloat(valorInput.value);
+  const categoria = categoriaInput.value;
+  const tipo = tipoInput.value;
 
   if(!descricao || isNaN(valor)) return alert('Preencha os campos corretamente');
 
   dados.push({descricao, valor, categoria, tipo});
   salvarStorage();
   atualizar();
+
+  // 🔥 Limpar campos após salvar
+  descricaoInput.value = '';
+  valorInput.value = '';
+  categoriaInput.selectedIndex = 0;
+  tipoInput.value = 'gasto';
+
+  descricaoInput.focus();
 }
   
     
