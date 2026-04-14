@@ -144,6 +144,7 @@ if ("serviceWorker" in navigator) {
 }
 
 let dados = JSON.parse(localStorage.getItem('gastos')) || [];
+let editIndex = null;
 
 function salvarStorage(){
   localStorage.setItem('gastos', JSON.stringify(dados));
@@ -157,25 +158,43 @@ function adicionar(){
 
   const descricao = descricaoInput.value;
   const valor = parseFloat(valorInput.value);
-  const categoria = categoriaInput.value;
-  const tipo = tipoInput.value;
 
-  if(!descricao || isNaN(valor)) return alert('Preencha os campos corretamente');
+  if(!descricao || isNaN(valor)) return alert('Preencha corretamente');
 
-  dados.push({descricao, valor, categoria, tipo});
+  const item = {
+    descricao,
+    valor,
+    categoria: categoriaInput.value,
+    tipo: tipoInput.value
+  };
+
+  if(editIndex !== null){
+    dados[editIndex] = item;
+    editIndex = null;
+  } else {
+    dados.push(item);
+  }
+
   salvarStorage();
   atualizar();
 
-  // 🔥 Limpar campos após salvar
   descricaoInput.value = '';
   valorInput.value = '';
   categoriaInput.selectedIndex = 0;
   tipoInput.value = 'gasto';
-
-  descricaoInput.focus();
 }
-  
-    
+
+function editar(index){
+  const item = dados[index];
+
+  document.getElementById('descricao').value = item.descricao;
+  document.getElementById('valor').value = item.valor;
+  document.getElementById('categoria').value = item.categoria;
+  document.getElementById('tipo').value = item.tipo;
+
+  editIndex = index;
+}
+
 function remover(index){
   dados.splice(index,1);
   salvarStorage();
@@ -198,9 +217,11 @@ function atualizar(){
         <td>${item.descricao}</td>
         <td>R$ ${item.valor.toFixed(2)}</td>
         <td>${item.categoria}</td>
-        <td><button onclick="remover(${index})" style="background-color: red; margin-bottom:5px">X</button></td>
-      </tr>
-    `;
+        <td>
+          <button onclick="editar(${index})" style="margin-bottom:5px; border: 1px solid red; padding:2px">✏️</button>
+          <button onclick="remover(${index})" style="margin-bottom:5px; border: 1px solid red; padding:2px">🗑️</button>
+        </td>
+      </tr>`;
   });
 
   document.getElementById('receitas').innerText = receitas.toFixed(2);
@@ -215,23 +236,16 @@ function atualizarGrafico(){
   const categorias = {};
 
   dados.forEach(item=>{
-    if(item.tipo === 'gasto'){
-      categorias[item.categoria] = (categorias[item.categoria] || 0) + item.valor;
+    if(item.tipo==='gasto'){
+      categorias[item.categoria] = (categorias[item.categoria]||0)+item.valor;
     }
   });
 
-  const labels = Object.keys(categorias);
-  const valores = Object.values(categorias);
-
   if(chart) chart.destroy();
 
-  const ctx = document.getElementById('grafico');
-  chart = new Chart(ctx, {
+  chart = new Chart(document.getElementById('grafico'),{
     type:'doughnut',
-    data:{
-      labels: labels,
-      datasets:[{data: valores}]
-    }
+    data:{labels:Object.keys(categorias),datasets:[{data:Object.values(categorias)}]}
   });
 }
 
@@ -255,17 +269,17 @@ function exportarPDF(){
     const saldo = receitas - gastos;
     const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-      // 🔥 TÍTULO EM NEGRITO
+    // 🔥 TÍTULO EM NEGRITO
     doc.setFont(undefined, 'bold');
     doc.setTextColor(41, 128, 185); // Define cor azul (R, G, B)
     doc.setFontSize(16);
     doc.text('RELATÓRIO FINANCEIRO', 105, 15, null, null, 'center');
 
-      // 🔥 VOLTA PARA NORMAL
+    // 🔥 VOLTA PARA NORMAL
     doc.setTextColor(0, 0, 0);
     doc.setFont(undefined, 'normal');
     doc.setFontSize(10);
-      
+
     doc.text('Data: ' + dataAtual, 10, 25);
     doc.text('Receitas: R$ ' + receitas.toFixed(2), 10, 35);
     doc.text('Gastos: R$ ' + gastos.toFixed(2), 10, 42);
@@ -275,17 +289,17 @@ function exportarPDF(){
 
     let y = 65;
 
-      // 🔥 CABEÇALHO TABELA EM NEGRITO
+    // 🔥 CABEÇALHO TABELA EM NEGRITO
     doc.setFont(undefined, 'bold');
     doc.setTextColor(41, 128, 185); // Define cor azul (R, G, B)
     doc.text('Descrição', 10, y);
     doc.text('Categoria', 90, y);
     doc.text('Valor', 160, y);
 
-      // 🔥 CONTEÚDO NORMAL
+    // 🔥 CONTEÚDO NORMAL
     doc.setTextColor(0, 0, 0);
     doc.setFont(undefined, 'normal');
-      
+
     y += 10;
 
     dados.forEach(item => {
@@ -311,6 +325,7 @@ function exportarPDF(){
 
 // Inicialização
 atualizar();
+
 </script>
 
 </body>
