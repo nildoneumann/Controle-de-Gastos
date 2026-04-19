@@ -13,55 +13,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body{
-  font-family:Arial, sans-serif;
-  margin:0;
-  background:#f4f6f9;
-}
-header{
-  background:#2c3e50;
-  color:#fff;
-  padding:15px;
-  text-align:center;
-}
-.container{
-  padding:15px;
-  max-width:1000px;
-  margin:auto;
-}
-.card{
-  background:#fff;
-  padding:7px 15px;
-  border-radius:10px;
-  margin-bottom:15px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.1);
-}
-input, select, button{
-  width:100%;
-  padding:8px;
-  margin-top:5px;
-  margin-bottom:10px;
-  border-radius:8px;
-  border:1px solid #ccc;
-}
-button{
-  background:#27ae60;
-  color:#fff;
-  border:none;
-  font-weight:bold;
-}
-button:hover{
-  background:#219150;
-}
-.table{
-  width:100%;
-  border-collapse:collapse;
-}
-.table th, .table td{
-  padding:5px;
-  border-bottom:1px solid #ddd;
-  text-align:left;
-}
+body{font-family:Arial;margin:0;background:#f4f6f9}
+header{background:#2c3e50;color:#fff;padding:10px;text-align:center}
+.container{padding:15px;max-width:1000px;margin:auto}
+.card{background:#fff;padding:7px 15px;border-radius:10px;margin-bottom:15px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
+input,select,button{width:100%;padding:8px;margin:5px 0;border-radius:8px;border:1px solid #ccc}
+button{background:#27ae60;color:#fff;border:none;font-weight:bold}
+button.cancelar{background:#e74c3c}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:5px;border-bottom:1px solid #ddd}
+.editando{background:#fff3cd}
 .flex{
   display:flex;
   gap:10px;
@@ -74,61 +35,49 @@ button:hover{
     flex-direction:column;
   }
 }
+
 </style>
 </head>
 
 <body>
 <label for="nome" style="font-size: 8px; color:blue; margin-left: 10px">© 2025 Leonildo.Neumann</label>
-<header>
-<h2>💰 Controle de Gastos</h2>
-</header>
+<header><h2>💰 Controle de Gastos</h2></header>
 
 <div class="container">
 
 <div class="card">
-<h3>Adicionar Transação</h3>
-<input id="descricao" placeholder="Descrição" style="max-width:97%">
-<input id="valor" type="number" placeholder="Valor" style="max-width:97%">
+<h3 id="tituloForm">Adicionar Transação</h3>
+<input id="descricao" placeholder="Descrição">
+<input id="valor" type="number" placeholder="Valor">
 <select id="categoria">
 <option>Alimentação</option>
 <option>Transporte</option>
 <option>Lazer</option>
 <option>Moradia</option>
 <option>Outros</option>
-<option>Renda</option>
 </select>
 <select id="tipo">
 <option value="gasto">Gasto</option>
 <option value="receita">Receita</option>
 </select>
-<button onclick="adicionar()">Salvar</button>
+<button id="btnSalvar" onclick="adicionar()">Salvar</button>
+<button id="btnCancelar" class="cancelar" onclick="cancelarEdicao()" style="display:none">Cancelar edição</button>
 </div>
 
 <div class="card" style="padding:2px 15px; background:#ddfada">
-<h3>Resumo</h3>
 <p>Saldo: R$ <span id="saldo">0</span></p>
 <p>Receitas: R$ <span id="receitas">0</span></p>
 <p>Gastos: R$ <span id="gastos">0</span></p>
 </div>
 
-<div class="card">
-<canvas id="grafico" style="max-height: 225px"></canvas>
-</div>
+<div class="card"><canvas id="grafico" style="max-height: 225px"></canvas>
 
-<div class="card" style="padding:7px 15px">
-<button onclick="exportarPDF()">📄 Exportar PDF</button>
-</div>
+<div class="card"><button onclick="exportarPDF()">📄 Exportar PDF</button></div>
 
 <div class="card">
-<h3>Histórico</h3>
 <table class="table">
 <thead>
-<tr>
-<th>Descrição</th>
-<th>Valor</th>
-<th>Categoria</th>
-<th>Ação</th>
-</tr>
+<tr><th>Descrição</th><th>Valor</th><th>Categoria</th><th>Ações</th></tr>
 </thead>
 <tbody id="lista"></tbody>
 </table>
@@ -137,12 +86,6 @@ button:hover{
 </div>
 
 <script>
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("service-worker.js")
-    .then(() => console.log("Service Worker registrado"))
-    .catch(err => console.error("Erro SW:", err));
-}
-
 let dados = JSON.parse(localStorage.getItem('gastos')) || [];
 let editIndex = null;
 
@@ -170,18 +113,13 @@ function adicionar(){
 
   if(editIndex !== null){
     dados[editIndex] = item;
-    editIndex = null;
   } else {
     dados.push(item);
   }
 
   salvarStorage();
+  resetForm();
   atualizar();
-
-  descricaoInput.value = '';
-  valorInput.value = '';
-  categoriaInput.selectedIndex = 0;
-  tipoInput.value = 'gasto';
 }
 
 function editar(index){
@@ -193,6 +131,31 @@ function editar(index){
   document.getElementById('tipo').value = item.tipo;
 
   editIndex = index;
+
+  document.getElementById('tituloForm').innerText = 'Editando Transação';
+  document.getElementById('btnSalvar').innerText = 'Atualizar';
+  document.getElementById('btnCancelar').style.display = 'block';
+
+  window.scrollTo({top:0, behavior:'smooth'});
+  atualizar();
+}
+
+function cancelarEdicao(){
+  resetForm();
+  atualizar();
+}
+
+function resetForm(){
+  document.getElementById('descricao').value = '';
+  document.getElementById('valor').value = '';
+  document.getElementById('categoria').selectedIndex = 0;
+  document.getElementById('tipo').value = 'gasto';
+
+  editIndex = null;
+
+  document.getElementById('tituloForm').innerText = 'Adicionar Transação';
+  document.getElementById('btnSalvar').innerText = 'Salvar';
+  document.getElementById('btnCancelar').style.display = 'none';
 }
 
 function remover(index){
@@ -212,8 +175,10 @@ function atualizar(){
     if(item.tipo === 'receita') receitas += item.valor;
     else gastos += item.valor;
 
+    const classe = (index === editIndex) ? 'editando' : '';
+
     lista.innerHTML += `
-      <tr>
+      <tr class="${classe}">
         <td>${item.descricao}</td>
         <td>R$ ${item.valor.toFixed(2)}</td>
         <td>${item.categoria}</td>
@@ -323,11 +288,11 @@ function exportarPDF(){
   }
 }
 
-// Inicialização
-atualizar();
 
+atualizar();
 </script>
 
 </body>
 </html>
+
 
