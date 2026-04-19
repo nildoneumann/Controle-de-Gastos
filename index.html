@@ -47,8 +47,8 @@ button.cancelar{background:#e74c3c}
 
 <div class="card">
 <h3 id="tituloForm">Adicionar Transação</h3>
-<input id="descricao" placeholder="Descrição">
-<input id="valor" type="number" placeholder="Valor">
+<input id="descricao" placeholder="Descrição" style="max-width:97%">
+<input id="valor" type="number" placeholder="Valor" style="max-width:97%">
 <select id="categoria">
 <option>Alimentação</option>
 <option>Transporte</option>
@@ -66,9 +66,9 @@ button.cancelar{background:#e74c3c}
 </div>
 
 <div class="card" style="padding:2px 15px; background:#ddfada">
-<p>Saldo: R$ <span id="saldo">0</span></p>
-<p>Receitas: R$ <span id="receitas">0</span></p>
-<p>Gastos: R$ <span id="gastos">0</span></p>
+<p>Saldo: R$ <span id="saldo" style="font-weight:bold">0</span></p>
+<p>Receitas: R$ <span id="receitas" style="font-weight:bold">0</span></p>
+<p>Gastos: R$ <span id="gastos" style="font-weight:bold">0</span></p>
 </div>
 
 <div class="card"><canvas id="grafico" style="max-height: 225px"></canvas>
