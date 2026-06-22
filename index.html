@@ -5,117 +5,656 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Controle de Gastos</title>
 <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#00aaff">
-    <!-- Ícones do PWA -->
-    <link rel="icon" href="icon-192.png" type="image/png">
-    <link rel="apple-touch-icon" href="icon-512.png">
+<meta name="theme-color" content="#0f172a">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
 <style>
-body{font-family:Arial;margin:0;background:#f4f6f9}
-header{background:#2c3e50;color:#fff;padding:10px;text-align:center}
-.container{padding:15px;max-width:1000px;margin:auto}
-.card{background:#fff;padding:7px 15px;border-radius:10px;margin-bottom:15px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
-input,select,button{width:100%;padding:8px;margin:5px 0;border-radius:8px;border:1px solid #ccc}
-button{background:#27ae60;color:#fff;border:none;font-weight:bold}
-button.cancelar{background:#e74c3c}
-.table{width:100%;border-collapse:collapse}
-.table th,.table td{padding:5px;border-bottom:1px solid #ddd}
-.editando{background:#fff3cd}
-.flex{
-  display:flex;
-  gap:10px;
-}
-.flex div{
-  flex:1;
-}
-@media(max-width:600px){
-  .flex{
-    flex-direction:column;
+  :root {
+    --bg: #0f172a;
+    --bg2: #1e293b;
+    --card: #1e293b;
+    --card-hover: #263348;
+    --border: #334155;
+    --fg: #f1f5f9;
+    --fg-muted: #94a3b8;
+    --accent: #10b981;
+    --accent-glow: rgba(16, 185, 129, 0.25);
+    --danger: #ef4444;
+    --danger-glow: rgba(239, 68, 68, 0.2);
+    --warning: #f59e0b;
+    --info: #06b6d4;
+    --receita: #10b981;
+    --gasto: #ef4444;
+    --radius: 14px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.3);
+    --font: 'Space Grotesk', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
   }
-}
 
+  [data-theme="light"] {
+    --bg: #f0f4f8;
+    --bg2: #e2e8f0;
+    --card: #ffffff;
+    --card-hover: #f8fafc;
+    --border: #cbd5e1;
+    --fg: #0f172a;
+    --fg-muted: #64748b;
+    --shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    transition: background 0.4s, color 0.4s;
+    overflow-x: hidden;
+  }
+
+  /* === FUNDO ANIMADO === */
+  .bg-blobs {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  }
+  .bg-blobs .blob {
+    position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.12;
+    animation: blobFloat 18s ease-in-out infinite alternate;
+  }
+  .bg-blobs .blob:nth-child(1) {
+    width: 500px; height: 500px; background: var(--accent); top: -10%; left: -10%;
+  }
+  .bg-blobs .blob:nth-child(2) {
+    width: 400px; height: 400px; background: var(--info); bottom: -10%; right: -10%;
+    animation-delay: -6s; animation-duration: 22s;
+  }
+  .bg-blobs .blob:nth-child(3) {
+    width: 300px; height: 300px; background: var(--warning); top: 50%; left: 50%;
+    transform: translate(-50%, -50%); animation-delay: -12s; animation-duration: 15s;
+  }
+  @keyframes blobFloat {
+    0% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(40px, -30px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.95); }
+    100% { transform: translate(30px, 10px) scale(1.05); }
+  }
+
+  /* === HEADER === */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: background 0.4s;
+  }
+  [data-theme="light"] header {
+    background: rgba(255,255,255,0.8);
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px; font-size: 1.25rem; font-weight: 700;
+  }
+  .logo i { color: var(--accent); font-size: 1.4rem; }
+  .header-actions { display: flex; gap: 8px; }
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--card); color: var(--fg-muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 0.95rem;
+    transition: all 0.25s;
+  }
+  .icon-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); transform: scale(1.05); }
+
+  /* === CONTAINER === */
+  .container {
+    position: relative; z-index: 1;
+    max-width: 960px; margin: 0 auto; padding: 20px 16px 60px;
+  }
+
+  /* === CARDS === */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+    transition: background 0.4s, border 0.4s, box-shadow 0.4s, transform 0.25s;
+    animation: cardIn 0.5s ease-out both;
+  }
+  .card:hover { transform: translateY(-1px); }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .card-title {
+    font-size: 0.95rem; font-weight: 600; color: var(--fg-muted);
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .card-title i { color: var(--accent); font-size: 0.9rem; }
+
+  /* === FORM === */
+  .form-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-group label {
+    font-size: 0.78rem; font-weight: 500; color: var(--fg-muted);
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .form-group input,
+  .form-group select {
+    width: 100%; padding: 10px 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg);
+    color: var(--fg); font-family: var(--font); font-size: 0.92rem;
+    transition: border 0.25s, box-shadow 0.25s;
+    outline: none;
+  }
+  .form-group input:focus,
+  .form-group select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .form-group input::placeholder { color: var(--fg-muted); opacity: 0.5; }
+
+  /* === TIPO TOGGLE === */
+  .tipo-toggle {
+    display: flex; border-radius: 10px; overflow: hidden; border: 1px solid var(--border);
+  }
+  .tipo-toggle button {
+    flex: 1; padding: 10px; border: none; font-family: var(--font);
+    font-weight: 600; font-size: 0.88rem; cursor: pointer;
+    transition: all 0.3s; background: var(--bg); color: var(--fg-muted);
+  }
+  .tipo-toggle button.active-gasto { background: var(--gasto); color: #fff; }
+  .tipo-toggle button.active-receita { background: var(--receita); color: #fff; }
+
+  /* === BOTÕES === */
+  .btn-row { display: flex; gap: 10px; margin-top: 4px; grid-column: 1 / -1; }
+  .btn {
+    flex: 1; padding: 12px; border: none; border-radius: 10px;
+    font-family: var(--font); font-weight: 600; font-size: 0.92rem;
+    cursor: pointer; transition: all 0.25s; display: flex; align-items: center;
+    justify-content: center; gap: 8px;
+  }
+  .btn-primary {
+    background: var(--accent); color: #fff;
+    box-shadow: 0 4px 16px var(--accent-glow);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 24px var(--accent-glow); filter: brightness(1.1); }
+  .btn-danger {
+    background: transparent; color: var(--danger); border: 1px solid var(--danger);
+  }
+  .btn-danger:hover { background: var(--danger); color: #fff; }
+  .btn-outline {
+    background: transparent; color: var(--fg-muted); border: 1px solid var(--border);
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* === RESUMO === */
+  .resumo-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  .resumo-item {
+    padding: 16px; border-radius: 12px; text-align: center;
+    border: 1px solid var(--border); transition: transform 0.25s;
+  }
+  .resumo-item:hover { transform: scale(1.03); }
+  .resumo-item.saldo { background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.08)); }
+  .resumo-item.receitas { background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.03)); }
+  .resumo-item.gastos { background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.03)); }
+  .resumo-label {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--fg-muted); margin-bottom: 6px; font-weight: 500;
+  }
+  .resumo-valor {
+    font-family: var(--mono); font-size: 1.3rem; font-weight: 700;
+  }
+  .resumo-item.saldo .resumo-valor { color: var(--accent); }
+  .resumo-item.receitas .resumo-valor { color: var(--receita); }
+  .resumo-item.gastos .resumo-valor { color: var(--gasto); }
+
+  /* === GRÁFICO === */
+  .chart-wrap {
+    position: relative; max-height: 260px; display: flex; align-items: center; justify-content: center;
+  }
+  .chart-empty {
+    text-align: center; color: var(--fg-muted); padding: 30px; font-size: 0.9rem;
+  }
+  .chart-empty i { font-size: 2rem; margin-bottom: 8px; display: block; opacity: 0.3; }
+
+  /* === FILTROS === */
+  .filtros {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center;
+  }
+  .filtro-chip {
+    padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+    background: transparent; color: var(--fg-muted); font-family: var(--font);
+    font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: all 0.25s;
+    white-space: nowrap;
+  }
+  .filtro-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .filtro-chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* === TABELA === */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; padding: 10px 12px; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.5px; color: var(--fg-muted);
+    border-bottom: 1px solid var(--border); font-weight: 600;
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border); transition: background 0.2s;
+    animation: rowIn 0.35s ease-out both;
+  }
+  tbody tr:hover { background: var(--card-hover); }
+  tbody tr.editando { background: rgba(245, 158, 11, 0.08); border-left: 3px solid var(--warning); }
+  @keyframes rowIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+  tbody td {
+    padding: 12px; font-size: 0.88rem; vertical-align: middle;
+  }
+  .td-desc { font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .td-valor { font-family: var(--mono); font-weight: 600; white-space: nowrap; }
+  .td-valor.receita { color: var(--receita); }
+  .td-valor.gasto { color: var(--gasto); }
+  .td-categoria {
+    font-size: 0.78rem; padding: 3px 10px; border-radius: 20px;
+    display: inline-block; font-weight: 500;
+  }
+  .td-data { font-size: 0.78rem; color: var(--fg-muted); font-family: var(--mono); white-space: nowrap; }
+  .td-acoes { display: flex; gap: 6px; }
+  .btn-sm {
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--fg-muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 0.78rem;
+    transition: all 0.2s;
+  }
+  .btn-sm.edit:hover { background: var(--info); color: #fff; border-color: var(--info); }
+  .btn-sm.del:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .empty-state {
+    text-align: center; padding: 40px 20px; color: var(--fg-muted);
+  }
+  .empty-state i { font-size: 2.5rem; margin-bottom: 10px; display: block; opacity: 0.2; }
+  .empty-state p { font-size: 0.9rem; }
+
+  /* === TOAST === */
+  .toast-container {
+    position: fixed; top: 80px; right: 20px; z-index: 9999;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast {
+    padding: 12px 20px; border-radius: 10px; font-size: 0.88rem;
+    font-family: var(--font); font-weight: 500; color: #fff;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    animation: toastIn 0.4s ease-out, toastOut 0.3s 2.5s ease-in forwards;
+    max-width: 340px;
+  }
+  .toast.success { background: linear-gradient(135deg, #059669, #10b981); }
+  .toast.error { background: linear-gradient(135deg, #dc2626, #ef4444); }
+  .toast.info { background: linear-gradient(135deg, #0284c7, #06b6d4); }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes toastOut { to { opacity: 0; transform: translateX(40px); } }
+
+  /* === MODAL CONFIRMAÇÃO === */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 9998; background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: auto; }
+  .modal-box {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 28px; max-width: 380px; width: 90%; text-align: center;
+    transform: scale(0.9); transition: transform 0.3s;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .modal-overlay.show .modal-box { transform: scale(1); }
+  .modal-box i { font-size: 2.2rem; color: var(--danger); margin-bottom: 12px; }
+  .modal-box h3 { font-size: 1.1rem; margin-bottom: 8px; }
+  .modal-box p { font-size: 0.88rem; color: var(--fg-muted); margin-bottom: 20px; }
+  .modal-btns { display: flex; gap: 10px; }
+  .modal-btns .btn { font-size: 0.85rem; padding: 10px; }
+
+  /* === FOOTER === */
+  .footer {
+    text-align: center; padding: 20px; font-size: 0.72rem; color: var(--fg-muted); opacity: 0.5;
+  }
+
+  /* === RESPONSIVIDADE === */
+  @media (max-width: 640px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .resumo-grid { grid-template-columns: 1fr; gap: 8px; }
+    .resumo-item { padding: 12px; }
+    .resumo-valor { font-size: 1.1rem; }
+    .logo span { display: none; }
+    .td-data { display: none; }
+    thead th:nth-child(4) { display: none; }
+    .filtros { gap: 6px; }
+    .filtro-chip { padding: 5px 10px; font-size: 0.75rem; }
+  }
+
+  /* === ACESSIBILIDADE === */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* === SCROLLBAR === */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--fg-muted); }
 </style>
 </head>
-
 <body>
-<label for="nome" style="font-size: 8px; color:blue; margin-left: 10px">© 2025 Leonildo.Neumann</label>
-<header><h2>💰 Controle de Gastos</h2></header>
 
-<div class="container">
-
-<div class="card">
-<h3 id="tituloForm">Adicionar Transação</h3>
-<input id="descricao" placeholder="Descrição" style="max-width:97%">
-<input id="valor" type="number" placeholder="Valor" style="max-width:97%">
-<select id="categoria">
-<option>Alimentação</option>
-<option>Transporte</option>
-<option>Lazer</option>
-<option>Moradia</option>
-<option>Outros</option>
-<option>Renda</option>
-</select>
-<select id="tipo">
-<option value="gasto">Gasto</option>
-<option value="receita">Receita</option>
-</select>
-<button id="btnSalvar" onclick="adicionar()">Salvar</button>
-<button id="btnCancelar" class="cancelar" onclick="cancelarEdicao()" style="display:none">Cancelar edição</button>
+<div class="bg-blobs">
+  <div class="blob"></div>
+  <div class="blob"></div>
+  <div class="blob"></div>
 </div>
 
-<div class="card" style="padding:2px 15px; background:#ddfada">
-<p>Saldo: R$ <span id="saldo" style="font-weight:bold">0</span></p>
-<p>Receitas: R$ <span id="receitas" style="font-weight:bold">0</span></p>
-<p>Gastos: R$ <span id="gastos" style="font-weight:bold">0</span></p>
+<!-- TOASTS -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- MODAL DE CONFIRMAÇÃO -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <h3>Confirmar exclusão</h3>
+    <p id="modalMsg">Deseja realmente excluir esta transação?</p>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="fecharModal()">Cancelar</button>
+      <button class="btn btn-danger" id="modalConfirm" style="background:var(--danger);color:#fff;border:none;">Excluir</button>
+    </div>
+  </div>
 </div>
 
-<div class="card"><canvas id="grafico" style="max-height: 225px"></canvas>
+<header>
+  <div class="logo">
+    <i class="fa-solid fa-wallet"></i>
+    <span>Controle de Gastos</span>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="exportarPDF()" title="Exportar PDF" aria-label="Exportar PDF">
+      <i class="fa-solid fa-file-pdf"></i>
+    </button>
+    <button class="icon-btn" id="themeToggle" onclick="toggleTheme()" title="Alternar tema" aria-label="Alternar tema">
+      <i class="fa-solid fa-moon"></i>
+    </button>
+  </div>
+</header>
 
-<div class="card"><button onclick="exportarPDF()">📄 Exportar PDF</button></div>
+<main class="container">
 
-<div class="card">
-<table class="table">
-<thead>
-<tr><th>Descrição</th><th>Valor</th><th>Categoria</th><th>Ações</th></tr>
-</thead>
-<tbody id="lista"></tbody>
-</table>
-</div>
+  <!-- FORMULÁRIO -->
+  <div class="card" style="animation-delay:0.05s">
+    <div class="card-title"><i class="fa-solid fa-plus-circle"></i> <span id="tituloForm">Nova Transação</span></div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label for="descricao">Descrição</label>
+        <input id="descricao" placeholder="Ex: Mercado, Salário, Uber..." autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="valor">Valor (R$)</label>
+        <input id="valor" type="number" step="0.01" min="0" placeholder="0,00">
+      </div>
+      <div class="form-group">
+        <label for="dataInput">Data</label>
+        <input id="dataInput" type="date">
+      </div>
+      <div class="form-group">
+        <label for="categoria">Categoria</label>
+        <select id="categoria">
+          <option value="Alimentação">Alimentação</option>
+          <option value="Transporte">Transporte</option>
+          <option value="Lazer">Lazer</option>
+          <option value="Moradia">Moradia</option>
+          <option value="Saúde">Saúde</option>
+          <option value="Educação">Educação</option>
+          <option value="Outros">Outros</option>
+          <option value="Renda">Renda</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tipo</label>
+        <div class="tipo-toggle">
+          <button id="btnGasto" class="active-gasto" onclick="setTipo('gasto')">
+            <i class="fa-solid fa-arrow-down"></i> Gasto
+          </button>
+          <button id="btnReceita" onclick="setTipo('receita')">
+            <i class="fa-solid fa-arrow-up"></i> Receita
+          </button>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnSalvar" onclick="adicionar()">
+          <i class="fa-solid fa-check"></i> <span id="btnSalvarText">Salvar</span>
+        </button>
+        <button class="btn btn-danger" id="btnCancelar" onclick="cancelarEdicao()" style="display:none">
+          <i class="fa-solid fa-xmark"></i> Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
 
-</div>
+  <!-- RESUMO -->
+  <div class="card" style="padding:16px; animation-delay:0.1s">
+    <div class="resumo-grid">
+      <div class="resumo-item saldo">
+        <div class="resumo-label">Saldo</div>
+        <div class="resumo-valor" id="saldo">R$ 0,00</div>
+      </div>
+      <div class="resumo-item receitas">
+        <div class="resumo-label">Receitas</div>
+        <div class="resumo-valor" id="receitas">R$ 0,00</div>
+      </div>
+      <div class="resumo-item gastos">
+        <div class="resumo-label">Gastos</div>
+        <div class="resumo-valor" id="gastos">R$ 0,00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRÁFICO -->
+  <div class="card" style="animation-delay:0.15s">
+    <div class="card-title"><i class="fa-solid fa-chart-pie"></i> Gastos por Categoria</div>
+    <div class="chart-wrap" id="chartWrap">
+      <div class="chart-empty" id="chartEmpty">
+        <i class="fa-solid fa-chart-pie"></i>
+        Adicione gastos para ver o gráfico
+      </div>
+      <canvas id="grafico" style="display:none; max-height:260px"></canvas>
+    </div>
+  </div>
+
+  <!-- LISTA -->
+  <div class="card" style="animation-delay:0.2s">
+    <div class="card-title"><i class="fa-solid fa-list"></i> Transações</div>
+
+    <div class="filtros" id="filtros">
+      <button class="filtro-chip active" data-filtro="todos" onclick="setFiltro('todos', this)">Todos</button>
+      <button class="filtro-chip" data-filtro="gasto" onclick="setFiltro('gasto', this)">Gastos</button>
+      <button class="filtro-chip" data-filtro="receita" onclick="setFiltro('receita', this)">Receitas</button>
+      <button class="filtro-chip" data-filtro="Alimentação" onclick="setFiltro('Alimentação', this)">Alimentação</button>
+      <button class="filtro-chip" data-filtro="Transporte" onclick="setFiltro('Transporte', this)">Transporte</button>
+      <button class="filtro-chip" data-filtro="Lazer" onclick="setFiltro('Lazer', this)">Lazer</button>
+      <button class="filtro-chip" data-filtro="Moradia" onclick="setFiltro('Moradia', this)">Moradia</button>
+      <button class="filtro-chip" data-filtro="Saúde" onclick="setFiltro('Saúde', this)">Saúde</button>
+      <button class="filtro-chip" data-filtro="Educação" onclick="setFiltro('Educação', this)">Educação</button>
+      <button class="filtro-chip" data-filtro="Outros" onclick="setFiltro('Outros', this)">Outros</button>
+      <button class="filtro-chip" data-filtro="Renda" onclick="setFiltro('Renda', this)">Renda</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Valor</th>
+            <th>Categoria</th>
+            <th>Data</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="lista"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="emptyState" style="display:none">
+      <i class="fa-solid fa-receipt"></i>
+      <p>Nenhuma transação encontrada</p>
+    </div>
+  </div>
+
+  <div class="footer">&copy; 2025 Leonildo.Neumann</div>
+</main>
 
 <script>
-let dados = JSON.parse(localStorage.getItem('gastos')) || [];
+// === ESTADO ===
+let dados = JSON.parse(localStorage.getItem('gastos_v2')) || [];
 let editIndex = null;
+let tipoAtual = 'gasto';
+let filtroAtual = 'todos';
+let chart = null;
+let pendingDeleteIndex = null;
 
-function salvarStorage(){
-  localStorage.setItem('gastos', JSON.stringify(dados));
+// === CORES DAS CATEGORIAS ===
+const coresCategorias = {
+  'Alimentação': '#f59e0b',
+  'Transporte': '#3b82f6',
+  'Lazer': '#a855f7',
+  'Moradia': '#ec4899',
+  'Saúde': '#ef4444',
+  'Educação': '#06b6d4',
+  'Outros': '#6b7280',
+  'Renda': '#10b981'
+};
+
+// === INICIALIZAÇÃO ===
+document.getElementById('dataInput').value = new Date().toISOString().split('T')[0];
+
+// Tema salvo
+const temaSalvo = localStorage.getItem('tema');
+if (temaSalvo === 'light') {
+  document.documentElement.setAttribute('data-theme', 'light');
+  document.getElementById('themeToggle').innerHTML = '<i class="fa-solid fa-sun"></i>';
 }
 
-function adicionar(){
-  const descricaoInput = document.getElementById('descricao');
-  const valorInput = document.getElementById('valor');
-  const categoriaInput = document.getElementById('categoria');
-  const tipoInput = document.getElementById('tipo');
+// === TEMA ===
+function toggleTheme() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  if (isLight) {
+    document.documentElement.removeAttribute('data-theme');
+    document.getElementById('themeToggle').innerHTML = '<i class="fa-solid fa-moon"></i>';
+    localStorage.setItem('tema', 'dark');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.getElementById('themeToggle').innerHTML = '<i class="fa-solid fa-sun"></i>';
+    localStorage.setItem('tema', 'light');
+  }
+  // Atualiza gráfico com novas cores
+  if (chart) atualizarGrafico();
+}
 
-  const descricao = descricaoInput.value;
-  const valor = parseFloat(valorInput.value);
+// === TOAST ===
+function toast(msg, tipo = 'success') {
+  const container = document.getElementById('toastContainer');
+  const icons = { success: 'fa-check-circle', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+  const el = document.createElement('div');
+  el.className = `toast ${tipo}`;
+  el.innerHTML = `<i class="fa-solid ${icons[tipo] || icons.info}"></i> ${msg}`;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
 
-  if(!descricao || isNaN(valor)) return alert('Preencha corretamente');
+// === MODAL ===
+function abrirModal(index) {
+  pendingDeleteIndex = index;
+  const item = dados[index];
+  document.getElementById('modalMsg').textContent = `Deseja excluir "${item.descricao}" (R$ ${item.valor.toFixed(2)})?`;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function fecharModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  pendingDeleteIndex = null;
+}
+document.getElementById('modalConfirm').addEventListener('click', () => {
+  if (pendingDeleteIndex !== null) {
+    // Se está editando o item que será excluído, cancela edição
+    if (editIndex === pendingDeleteIndex) cancelarEdicao();
+    dados.splice(pendingDeleteIndex, 1);
+    salvarStorage();
+    atualizar();
+    toast('Transação excluída', 'error');
+  }
+  fecharModal();
+});
+// Fechar modal clicando fora
+document.getElementById('modalOverlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) fecharModal();
+});
 
-  const item = {
-    descricao,
-    valor,
-    categoria: categoriaInput.value,
-    tipo: tipoInput.value
-  };
+// === TIPO TOGGLE ===
+function setTipo(tipo) {
+  tipoAtual = tipo;
+  const btnG = document.getElementById('btnGasto');
+  const btnR = document.getElementById('btnReceita');
+  btnG.className = tipo === 'gasto' ? 'active-gasto' : '';
+  btnR.className = tipo === 'receita' ? 'active-receita' : '';
+}
 
-  if(editIndex !== null){
+// === FILTRO ===
+function setFiltro(filtro, btn) {
+  filtroAtual = filtro;
+  document.querySelectorAll('.filtro-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  atualizarLista();
+}
+
+// === STORAGE ===
+function salvarStorage() {
+  localStorage.setItem('gastos_v2', JSON.stringify(dados));
+}
+
+// === FORMATAÇÃO MOEDA ===
+function fmtMoeda(val) {
+  return 'R$ ' + val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// === ADICIONAR / ATUALIZAR ===
+function adicionar() {
+  const desc = document.getElementById('descricao').value.trim();
+  const val = parseFloat(document.getElementById('valor').value);
+  const cat = document.getElementById('categoria').value;
+  const data = document.getElementById('dataInput').value;
+
+  if (!desc) { toast('Preencha a descrição', 'error'); document.getElementById('descricao').focus(); return; }
+  if (isNaN(val) || val <= 0) { toast('Informe um valor válido', 'error'); document.getElementById('valor').focus(); return; }
+  if (!data) { toast('Selecione a data', 'error'); document.getElementById('dataInput').focus(); return; }
+
+  const item = { descricao: desc, valor: val, categoria: cat, tipo: tipoAtual, data: data };
+
+  if (editIndex !== null) {
     dados[editIndex] = item;
+    toast('Transação atualizada com sucesso', 'info');
   } else {
     dados.push(item);
+    toast('Transação adicionada com sucesso', 'success');
   }
 
   salvarStorage();
@@ -123,176 +662,392 @@ function adicionar(){
   atualizar();
 }
 
-function editar(index){
+// === EDITAR ===
+function editar(index) {
   const item = dados[index];
-
   document.getElementById('descricao').value = item.descricao;
   document.getElementById('valor').value = item.valor;
   document.getElementById('categoria').value = item.categoria;
-  document.getElementById('tipo').value = item.tipo;
+  document.getElementById('dataInput').value = item.data || '';
+  setTipo(item.tipo);
 
   editIndex = index;
+  document.getElementById('tituloForm').textContent = 'Editando Transação';
+  document.getElementById('btnSalvarText').textContent = 'Atualizar';
+  document.getElementById('btnCancelar').style.display = 'flex';
 
-  document.getElementById('tituloForm').innerText = 'Editando Transação';
-  document.getElementById('btnSalvar').innerText = 'Atualizar';
-  document.getElementById('btnCancelar').style.display = 'block';
-
-  window.scrollTo({top:0, behavior:'smooth'});
-  atualizar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('descricao').focus();
+  atualizarLista();
 }
 
-function cancelarEdicao(){
+// === CANCELAR EDIÇÃO ===
+function cancelarEdicao() {
   resetForm();
-  atualizar();
+  atualizarLista();
 }
 
-function resetForm(){
+// === RESET FORM ===
+function resetForm() {
   document.getElementById('descricao').value = '';
   document.getElementById('valor').value = '';
   document.getElementById('categoria').selectedIndex = 0;
-  document.getElementById('tipo').value = 'gasto';
-
+  document.getElementById('dataInput').value = new Date().toISOString().split('T')[0];
+  setTipo('gasto');
   editIndex = null;
-
-  document.getElementById('tituloForm').innerText = 'Adicionar Transação';
-  document.getElementById('btnSalvar').innerText = 'Salvar';
+  document.getElementById('tituloForm').textContent = 'Nova Transação';
+  document.getElementById('btnSalvarText').textContent = 'Salvar';
   document.getElementById('btnCancelar').style.display = 'none';
 }
 
-function remover(index){
-  dados.splice(index,1);
-  salvarStorage();
-  atualizar();
+// === FILTRAR DADOS ===
+function dadosFiltrados() {
+  if (filtroAtual === 'todos') return dados;
+  if (filtroAtual === 'gasto' || filtroAtual === 'receita') {
+    return dados.filter(d => d.tipo === filtroAtual);
+  }
+  return dados.filter(d => d.categoria === filtroAtual);
 }
 
-function atualizar(){
+// === ATUALIZAR LISTA ===
+function atualizarLista() {
   const lista = document.getElementById('lista');
-  lista.innerHTML = '';
+  const empty = document.getElementById('emptyState');
+  const filtrados = dadosFiltrados();
 
-  let receitas = 0;
-  let gastos = 0;
+  if (filtrados.length === 0) {
+    lista.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
 
-  dados.forEach((item, index)=>{
-    if(item.tipo === 'receita') receitas += item.valor;
-    else gastos += item.valor;
+  // Ordenar por data (mais recente primeiro)
+  const ordenados = filtrados.map((item, i) => ({ ...item, originalIndex: dados.indexOf(item) }))
+    .sort((a, b) => (b.data || '').localeCompare(a.data || ''));
 
-    const classe = (index === editIndex) ? 'editando' : '';
-
-    lista.innerHTML += `
-      <tr class="${classe}">
-        <td>${item.descricao}</td>
-        <td>R$ ${item.valor.toFixed(2)}</td>
-        <td>${item.categoria}</td>
+  lista.innerHTML = ordenados.map((item, idx) => {
+    const i = item.originalIndex;
+    const classe = i === editIndex ? 'editando' : '';
+    const corCat = coresCategorias[item.categoria] || '#6b7280';
+    const dataFormatada = item.data ? new Date(item.data + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+    return `
+      <tr class="${classe}" style="animation-delay:${idx * 0.03}s">
+        <td class="td-desc">${escHTML(item.descricao)}</td>
+        <td class="td-valor ${item.tipo}">${item.tipo === 'receita' ? '+' : '-'} ${fmtMoeda(item.valor)}</td>
+        <td><span class="td-categoria" style="background:${corCat}20; color:${corCat}; border:1px solid ${corCat}40">${item.categoria}</span></td>
+        <td class="td-data">${dataFormatada}</td>
         <td>
-          <button onclick="editar(${index})" style="margin-bottom:5px; border: 1px solid red; padding:2px 0px; font-size:11px">editar</button>
-          <button onclick="remover(${index})" style="margin-bottom:5px; border: 1px solid red; padding:2px 0px; font-size:11px">excluir</button>
+          <div class="td-acoes">
+            <button class="btn-sm edit" onclick="editar(${i})" title="Editar" aria-label="Editar transação"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn-sm del" onclick="abrirModal(${i})" title="Excluir" aria-label="Excluir transação"><i class="fa-solid fa-trash"></i></button>
+          </div>
         </td>
       </tr>`;
+  }).join('');
+}
+
+// === ESCAPE HTML ===
+function escHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// === ATUALIZAR TUDO ===
+function atualizar() {
+  let receitas = 0, gastos = 0;
+  dados.forEach(item => {
+    if (item.tipo === 'receita') receitas += item.valor;
+    else gastos += item.valor;
   });
 
-  document.getElementById('receitas').innerText = receitas.toFixed(2);
-  document.getElementById('gastos').innerText = gastos.toFixed(2);
-  document.getElementById('saldo').innerText = (receitas - gastos).toFixed(2);
+  document.getElementById('receitas').textContent = fmtMoeda(receitas);
+  document.getElementById('gastos').textContent = fmtMoeda(gastos);
+  const saldoEl = document.getElementById('saldo');
+  const saldoVal = receitas - gastos;
+  saldoEl.textContent = (saldoVal < 0 ? '-' : '') + fmtMoeda(Math.abs(saldoVal));
+  saldoEl.style.color = saldoVal >= 0 ? 'var(--receita)' : 'var(--gasto)';
 
+  atualizarLista();
   atualizarGrafico();
 }
 
-let chart;
-function atualizarGrafico(){
-  const categorias = {};
+// === GRÁFICO ===
+function atualizarGrafico() {
+  const canvas = document.getElementById('grafico');
+  const emptyEl = document.getElementById('chartEmpty');
 
-  dados.forEach(item=>{
-    if(item.tipo==='gasto'){
-      categorias[item.categoria] = (categorias[item.categoria]||0)+item.valor;
+  // Agrupar gastos por categoria
+  const cats = {};
+  dados.forEach(item => {
+    if (item.tipo === 'gasto') {
+      cats[item.categoria] = (cats[item.categoria] || 0) + item.valor;
     }
   });
 
-  if(chart) chart.destroy();
+  const labels = Object.keys(cats);
+  const values = Object.values(cats);
 
-  chart = new Chart(document.getElementById('grafico'),{
-    type:'doughnut',
-    data:{labels:Object.keys(categorias),datasets:[{data:Object.values(categorias)}]}
+  if (labels.length === 0) {
+    canvas.style.display = 'none';
+    emptyEl.style.display = 'block';
+    if (chart) { chart.destroy(); chart = null; }
+    return;
+  }
+
+  canvas.style.display = 'block';
+  emptyEl.style.display = 'none';
+
+  const bgColors = labels.map(l => coresCategorias[l] || '#6b7280');
+  const isDark = !document.documentElement.getAttribute('data-theme') ||
+    document.documentElement.getAttribute('data-theme') !== 'light';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+  const gridColor = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(100,116,139,0.1)';
+
+  if (chart) chart.destroy();
+
+  chart = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: bgColors,
+        borderColor: isDark ? '#1e293b' : '#ffffff',
+        borderWidth: 3,
+        hoverBorderWidth: 0,
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: textColor,
+            font: { family: "'Space Grotesk', sans-serif", size: 12, weight: '500' },
+            padding: 16,
+            usePointStyle: true,
+            pointStyleWidth: 10
+          }
+        },
+        tooltip: {
+          backgroundColor: isDark ? '#334155' : '#fff',
+          titleColor: isDark ? '#f1f5f9' : '#0f172a',
+          bodyColor: isDark ? '#cbd5e1' : '#475569',
+          borderColor: isDark ? '#475569' : '#e2e8f0',
+          borderWidth: 1,
+          cornerRadius: 10,
+          padding: 12,
+          titleFont: { family: "'Space Grotesk', sans-serif", weight: '600' },
+          bodyFont: { family: "'JetBrains Mono', monospace", size: 12 },
+          callbacks: {
+            label: function(ctx) {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = ((ctx.parsed / total) * 100).toFixed(1);
+              return ` ${fmtMoeda(ctx.parsed)} (${pct}%)`;
+            }
+          }
+        }
+      },
+      animation: {
+        animateRotate: true,
+        duration: 800,
+        easing: 'easeOutQuart'
+      }
+    }
   });
 }
 
-function exportarPDF(){
+// === EXPORTAR PDF ===
+function exportarPDF() {
   try {
     if (!window.jspdf || !window.jspdf.jsPDF) {
-      alert('Biblioteca PDF não carregou');
+      toast('Biblioteca PDF não carregou', 'error');
       return;
     }
 
     const doc = new window.jspdf.jsPDF();
-
-    let receitas = 0;
-    let gastos = 0;
-
-    dados.forEach(item=>{
-      if(item.tipo === 'receita') receitas += item.valor;
+    let receitas = 0, gastos = 0;
+    dados.forEach(item => {
+      if (item.tipo === 'receita') receitas += item.valor;
       else gastos += item.valor;
     });
-
     const saldo = receitas - gastos;
     const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-    // 🔥 TÍTULO EM NEGRITO
+    // Título
     doc.setFont(undefined, 'bold');
-    doc.setTextColor(41, 128, 185); // Define cor azul (R, G, B)
-    doc.setFontSize(16);
-    doc.text('RELATÓRIO FINANCEIRO', 105, 15, null, null, 'center');
+    doc.setTextColor(16, 185, 129);
+    doc.setFontSize(18);
+    doc.text('RELATÓRIO FINANCEIRO', 105, 18, null, null, 'center');
 
-    // 🔥 VOLTA PARA NORMAL
-    doc.setTextColor(0, 0, 0);
-    doc.setFont(undefined, 'normal');
+    // Subtítulo
     doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Gerado em ' + dataAtual, 105, 26, null, null, 'center');
 
-    doc.text('Data: ' + dataAtual, 10, 25);
-    doc.text('Receitas: R$ ' + receitas.toFixed(2), 10, 35);
-    doc.text('Gastos: R$ ' + gastos.toFixed(2), 10, 42);
-    doc.text('Saldo: R$ ' + saldo.toFixed(2), 10, 49);
+    // Linha separadora
+    doc.setDrawColor(16, 185, 129);
+    doc.setLineWidth(0.5);
+    doc.line(10, 30, 200, 30);
 
-    doc.line(10, 55, 200, 55);
-
-    let y = 65;
-
-    // 🔥 CABEÇALHO TABELA EM NEGRITO
-    doc.setFont(undefined, 'bold');
-    doc.setTextColor(41, 128, 185); // Define cor azul (R, G, B)
-    doc.text('Descrição', 10, y);
-    doc.text('Categoria', 90, y);
-    doc.text('Valor', 160, y);
-
-    // 🔥 CONTEÚDO NORMAL
-    doc.setTextColor(0, 0, 0);
+    // Resumo
     doc.setFont(undefined, 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(16, 185, 129);
+    doc.text('Receitas: ' + fmtMoeda(receitas), 10, 40);
+    doc.setTextColor(239, 68, 68);
+    doc.text('Gastos: ' + fmtMoeda(gastos), 10, 48);
+    doc.setTextColor(saldo >= 0 ? 16 : 239, saldo >= 0 ? 185 : 68, saldo >= 0 ? 129 : 68);
+    doc.setFont(undefined, 'bold');
+    doc.text('Saldo: ' + fmtMoeda(saldo), 10, 56);
 
-    y += 10;
+    // Linha
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(10, 62, 200, 62);
 
-    dados.forEach(item => {
-      doc.text(String(item.descricao).substring(0,30), 10, y);
-      doc.text(String(item.categoria), 90, y);
-      doc.text('R$ ' + item.valor.toFixed(2), 160, y);
+    // Cabeçalho tabela
+    let y = 72;
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text('DESCRIÇÃO', 10, y);
+    doc.text('CATEGORIA', 85, y);
+    doc.text('TIPO', 130, y);
+    doc.text('VALOR', 160, y);
+    doc.text('DATA', 185, y);
 
-      y += 8;
+    y += 4;
+    doc.setDrawColor(220, 220, 220);
+    doc.line(10, y, 200, y);
+    y += 8;
 
-      if (y > 280) {
-        doc.addPage();
-        y = 20;
-      }
+    // Linhas
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(9);
+    const ordenados = [...dados].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+
+    ordenados.forEach(item => {
+      if (y > 275) { doc.addPage(); y = 20; }
+
+      doc.setTextColor(30, 30, 30);
+      doc.text(String(item.descricao).substring(0, 32), 10, y);
+
+      doc.setTextColor(100, 100, 100);
+      doc.text(String(item.categoria).substring(0, 18), 85, y);
+
+      doc.setTextColor(item.tipo === 'receita' ? 16 : 239, item.tipo === 'receita' ? 185 : 68, item.tipo === 'receita' ? 129 : 68);
+      doc.text(item.tipo === 'receita' ? 'Receita' : 'Gasto', 130, y);
+
+      doc.setTextColor(30, 30, 30);
+      doc.text(fmtMoeda(item.valor), 160, y);
+
+      doc.setTextColor(130, 130, 130);
+      doc.text(item.data ? new Date(item.data + 'T00:00:00').toLocaleDateString('pt-BR') : '-', 185, y);
+
+      y += 7;
     });
 
+    // Rodapé
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(7);
+      doc.setTextColor(180, 180, 180);
+      doc.text('Controle de Gastos - Leonildo.Neumann © 2025  |  Página ' + i + '/' + pageCount, 105, 290, null, null, 'center');
+    }
+
     doc.save('relatorio-financeiro.pdf');
+    toast('PDF exportado com sucesso', 'success');
 
   } catch (e) {
     console.error(e);
-    alert('Erro ao gerar PDF');
+    toast('Erro ao gerar PDF', 'error');
   }
 }
 
+// === ATALHOS DE TECLADO ===
+document.addEventListener('keydown', (e) => {
+  // Escape cancela edição
+  if (e.key === 'Escape') {
+    if (document.getElementById('modalOverlay').classList.contains('show')) {
+      fecharModal();
+    } else if (editIndex !== null) {
+      cancelarEdicao();
+    }
+  }
+  // Enter no form salva (se não estiver no select)
+  if (e.key === 'Enter' && e.target.tagName !== 'SELECT') {
+    e.preventDefault();
+    adicionar();
+  }
+});
 
+// === INICIALIZAÇÃO ===
 atualizar();
-</script>
 
+
+if('serviceWorker' in navigator){
+
+  window.addEventListener('load', ()=>{
+
+    navigator.serviceWorker
+      .register('./service-worker.js')
+      .then(()=> console.log('PWA ativo'));
+
+  });
+
+}
+
+// Bloquear clique direito
+document.addEventListener('contextmenu', e => {
+  e.preventDefault();
+});
+
+// Bloquear atalhos DevTools
+document.addEventListener('keydown', e => {
+
+  if (
+    e.key === 'F12' ||
+
+    (e.ctrlKey && e.shiftKey &&
+      ['I', 'J', 'C'].includes(e.key)) ||
+
+    (e.ctrlKey && e.key === 'u')
+  ) {
+    e.preventDefault();
+  }
+});
+
+// Detectar DevTools
+setInterval(() => {
+
+  const largura =
+    window.outerWidth - window.innerWidth > 160;
+
+  const altura =
+    window.outerHeight - window.innerHeight > 160;
+
+  if (largura || altura) {
+
+    document.body.innerHTML = `
+      <h1 style="color:red;text-align:center">
+        Acesso bloqueado
+      </h1>
+    `;
+
+  }
+
+}, 1000);
+
+
+</script>
 </body>
 </html>
 
